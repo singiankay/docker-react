@@ -18,8 +18,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        key: ${{ runner.os }}-buildx-${{ github.ref }}-${{ github.sha }}
         restore-keys: |
+          ${{ runner.os }}-buildx-${{ github.ref }}-
           ${{ runner.os }}-buildx-
     - name: Build the Docker image
       run: docker build -t singiankay/docker-react -f ./frontend/Dockerfile.dev .
