@@ -1,0 +1,7 @@
+sudo: required
+services:
+  - docker
+before_install:
+  - docker build -t singiankay/docker-react -f ./frontend/Dockerfile.dev .
+script:
+  - docker run -e CI=true singiankay/docker-react npm run test -- --coverage
