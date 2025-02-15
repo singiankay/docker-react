@@ -23,6 +23,6 @@ jobs:
           ${{ runner.os }}-buildx-${{ github.ref }}-
           ${{ runner.os }}-buildx-
     - name: Build the Docker image
-      run: docker build -t singiankay/docker-react -f ./frontend/Dockerfile.dev .
+      run: docker build -t singiankay/docker-react -f ./frontend/Dockerfile.dev ./frontend
     - name: Run tests
       run: docker run -e CI=true singiankay/docker-react npm run test -- --coverage
