@@ -73,23 +73,14 @@ jobs:
         run: |
           cat > Dockerrun.aws.json <<EOF
           {
-            "AWSEBDockerrunVersion": 2,
-            "containerDefinitions": [
+            "AWSEBDockerrunVersion": 1,
+            "Image": {
+              "Name": "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG",
+              "Update": "true"
+            },
+            "Ports": [
               {
-                "name": "docker-react",
-                "image": "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG",
-                "essential": true,
-                "memory": 256,
-                "portMappings": [
-                  {
-                    "hostPort": 80,
-                    "containerPort": 80,
-                    "protocol": "tcp"
-                  }
-                ],
-                "environment": [],
-                "mountPoints": [],
-                "volumesFrom": []
+                "ContainerPort": "80"
               }
             ]
           }
