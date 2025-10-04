@@ -103,6 +103,46 @@ jobs:
             echo "Application already exists."
           fi
 
+      # Create IAM role for EC2 instances if it doesn't exist
+      - name: Create EC2 IAM Role
+        run: |
+          if ! aws iam get-role --role-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
+            echo "Creating IAM role for EC2 instances..."
+            aws iam create-role \
+              --role-name ElasticBeanstalk-EC2-Role \
+              --assume-role-policy-document '{
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {"Service": "ec2.amazonaws.com"},
+                    "Action": "sts:AssumeRole"
+                  }
+                ]
+              }'
+            aws iam attach-role-policy \
+              --role-name ElasticBeanstalk-EC2-Role \
+              --policy-arn arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+            aws iam attach-role-policy \
+              --role-name ElasticBeanstalk-EC2-Role \
+              --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+          else
+            echo "IAM role already exists."
+          fi
+
+      # Create instance profile if it doesn't exist
+      - name: Create EC2 Instance Profile
+        run: |
+          if ! aws iam get-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
+            echo "Creating instance profile..."
+            aws iam create-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role
+            aws iam add-role-to-instance-profile \
+              --instance-profile-name ElasticBeanstalk-EC2-Role \
+              --role-name ElasticBeanstalk-EC2-Role
+          else
+            echo "Instance profile already exists."
+          fi
+
       # Create new application version
       - name: Create application version
         run: |
@@ -126,7 +166,8 @@ jobs:
                --application-name docker-react \
                --environment-name production \
                --solution-stack-name "64bit Amazon Linux 2023 v4.7.1 running Docker" \
-               --version-label $VERSION_LABEL
+               --version-label $VERSION_LABEL \
+               --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=ElasticBeanstalk-EC2-Role
            else
              echo "Environment exists (status: $ENV_STATUS). Updating production..."
              aws elasticbeanstalk update-environment \
