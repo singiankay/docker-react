@@ -103,44 +103,30 @@ jobs:
             echo "Application already exists."
           fi
 
-      # Create IAM role for EC2 instances if it doesn't exist
-      - name: Create EC2 IAM Role
+      # Verify EC2 IAM role exists (must be created manually)
+      - name: Verify EC2 IAM Role
         run: |
-          if ! aws iam get-role --role-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
-            echo "Creating IAM role for EC2 instances..."
-            aws iam create-role \
-              --role-name ElasticBeanstalk-EC2-Role \
-              --assume-role-policy-document '{
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Principal": {"Service": "ec2.amazonaws.com"},
-                    "Action": "sts:AssumeRole"
-                  }
-                ]
-              }'
-            aws iam attach-role-policy \
-              --role-name ElasticBeanstalk-EC2-Role \
-              --policy-arn arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
-            aws iam attach-role-policy \
-              --role-name ElasticBeanstalk-EC2-Role \
-              --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+          if aws iam get-role --role-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
+            echo "IAM role exists. Checking instance profile..."
+            if aws iam get-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
+              echo "Instance profile exists. Ready to deploy."
+            else
+              echo "ERROR: Instance profile 'ElasticBeanstalk-EC2-Role' does not exist."
+              echo "Please create it manually in AWS Console:"
+              echo "1. Go to IAM Console > Instance Profiles"
+              echo "2. Create instance profile named 'ElasticBeanstalk-EC2-Role'"
+              echo "3. Add role 'ElasticBeanstalk-EC2-Role' to the instance profile"
+              exit 1
+            fi
           else
-            echo "IAM role already exists."
-          fi
-
-      # Create instance profile if it doesn't exist
-      - name: Create EC2 Instance Profile
-        run: |
-          if ! aws iam get-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
-            echo "Creating instance profile..."
-            aws iam create-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role
-            aws iam add-role-to-instance-profile \
-              --instance-profile-name ElasticBeanstalk-EC2-Role \
-              --role-name ElasticBeanstalk-EC2-Role
-          else
-            echo "Instance profile already exists."
+            echo "ERROR: IAM role 'ElasticBeanstalk-EC2-Role' does not exist."
+            echo "Please create it manually in AWS Console:"
+            echo "1. Go to IAM Console > Roles"
+            echo "2. Create role for EC2 service"
+            echo "3. Attach policies: AWSElasticBeanstalkWebTier, AmazonEC2ContainerRegistryReadOnly"
+            echo "4. Name it 'ElasticBeanstalk-EC2-Role'"
+            echo "5. Create instance profile with the same name"
+            exit 1
           fi
 
       # Create new application version

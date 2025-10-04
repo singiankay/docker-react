@@ -24,8 +24,8 @@ The pipeline consists of two main jobs:
 
 #### 2. **Deploy Job**
 - Configures AWS credentials using GitHub OIDC
+- Verifies required IAM resources exist (fails with clear instructions if missing)
 - Pushes Docker images to Amazon ECR
-- Creates necessary IAM roles and instance profiles
 - Manages Elastic Beanstalk applications and environments
 - Handles automatic cleanup of old versions
 
@@ -66,15 +66,59 @@ react-app/
 - AWS CLI configured locally (for manual operations)
 
 ### AWS IAM Setup
-The pipeline automatically creates:
-- **GitHub Actions Role**: `GithubActionsElasticBeanStalkRole`
-- **EC2 Instance Role**: `ElasticBeanstalk-EC2-Role`
-- **Instance Profile**: `ElasticBeanstalk-EC2-Role`
 
-### Required AWS Policies
-- `AWSElasticBeanstalkWebTier`
-- `AmazonEC2ContainerRegistryReadOnly`
-- Custom policies for GitHub Actions OIDC
+#### GitHub Actions Role (Automatic)
+The pipeline uses GitHub OIDC with:
+- **Role**: `GithubActionsElasticBeanStalkRole`
+- **Trust**: GitHub Actions OIDC provider
+- **Permissions**: Elastic Beanstalk, ECR, S3, IAM verification
+
+#### EC2 Instance Role (Manual Setup Required)
+You must manually create the EC2 instance role:
+
+**Role Name**: `ElasticBeanstalk-EC2-Role`
+- **Trusted Entity**: EC2 service
+- **Attached Policies**:
+  - `AWSElasticBeanstalkWebTier` (basic EB functionality)
+  - `AmazonEC2ContainerRegistryReadOnly` (pull Docker images)
+
+**Instance Profile**: `ElasticBeanstalk-EC2-Role`
+- Links the IAM role to EC2 instances
+
+#### Quick Setup Commands
+```bash
+# Create EC2 role
+aws iam create-role \
+  --role-name ElasticBeanstalk-EC2-Role \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {"Service": "ec2.amazonaws.com"},
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }'
+
+# Attach policies
+aws iam attach-role-policy \
+  --role-name ElasticBeanstalk-EC2-Role \
+  --policy-arn arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+
+aws iam attach-role-policy \
+  --role-name ElasticBeanstalk-EC2-Role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+
+# Create instance profile
+aws iam create-instance-profile \
+  --instance-profile-name ElasticBeanstalk-EC2-Role
+
+# Add role to instance profile
+aws iam add-role-to-instance-profile \
+  --instance-profile-name ElasticBeanstalk-EC2-Role \
+  --role-name ElasticBeanstalk-EC2-Role
+```
 
 ## 🚀 Deployment Process
 
@@ -103,8 +147,7 @@ aws elasticbeanstalk describe-environments \
   --environment-names production \
   --query "Environments[0].CNAME" \
   --output text \
-  --region ap-southeast-1 \
-  --profile personal-profile
+  --region ap-southeast-1
 ```
 
 ### Expected URL Format
@@ -124,10 +167,24 @@ aws elasticbeanstalk describe-environments \
   --region ap-southeast-1
 ```
 
+### IAM Resources Verification
+```bash
+# Verify EC2 role exists
+aws iam get-role --role-name ElasticBeanstalk-EC2-Role --profile personal-profile
+
+# Verify instance profile exists
+aws iam get-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role --profile personal-profile
+
+# List attached policies
+aws iam list-attached-role-policies --role-name ElasticBeanstalk-EC2-Role --profile personal-profile
+```
+
 ### Common Issues
 1. **Environment Terminated**: Usually due to missing IAM permissions (fixed with instance profile)
-2. **Build Failures**: Check GitHub Actions logs for Docker build errors
-3. **ECR Push Failures**: Verify AWS credentials and ECR repository permissions
+2. **IAM Role Not Found**: Ensure `ElasticBeanstalk-EC2-Role` and instance profile are created manually
+3. **Build Failures**: Check GitHub Actions logs for Docker build errors
+4. **ECR Push Failures**: Verify AWS credentials and ECR repository permissions
+5. **Access Denied for IAM**: GitHub Actions role needs proper OIDC trust relationship
 
 ### Logs
 - **GitHub Actions**: Check workflow runs in GitHub repository
