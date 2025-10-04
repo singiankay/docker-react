@@ -125,7 +125,7 @@ jobs:
              aws elasticbeanstalk create-environment \
                --application-name docker-react \
                --environment-name production \
-               --solution-stack-name "64bit Amazon Linux 2 v5.8.4 running Docker" \
+               --solution-stack-name "64bit Amazon Linux 2023 v4.7.1 running Docker" \
                --version-label $VERSION_LABEL
            else
              echo "Environment exists (status: $ENV_STATUS). Updating production..."
