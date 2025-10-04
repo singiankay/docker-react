@@ -111,28 +111,28 @@ jobs:
             --version-label $VERSION_LABEL \
             --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-185157186506,S3Key=dockerrun/$VERSION_LABEL.zip
 
-      # Create or update environment
-      - name: Create or Update environment
-        run: |
-          ENV_STATUS=$(aws elasticbeanstalk describe-environments \
-            --application-name docker-react \
-            --environment-names production \
-            --query "Environments[0].Status" \
-            --output text 2>/dev/null || echo "NONE")
+       # Create or update environment
+       - name: Create or Update environment
+         run: |
+           ENV_STATUS=$(aws elasticbeanstalk describe-environments \
+             --application-name docker-react \
+             --environment-names production \
+             --query "Environments[0].Status" \
+             --output text 2>/dev/null || echo "NONE")
 
-          if [ "$ENV_STATUS" = "NONE" ] || [ "$ENV_STATUS" = "None" ]; then
-            echo "Environment not found. Creating production..."
-            aws elasticbeanstalk create-environment \
-              --application-name docker-react \
-              --environment-name production \
-              --solution-stack-name "64bit Amazon Linux 2 v5.8.4 running Docker" \
-              --version-label $VERSION_LABEL
-          else
-            echo "Environment exists (status: $ENV_STATUS). Updating production..."
-            aws elasticbeanstalk update-environment \
-              --environment-name production \
-              --version-label $VERSION_LABEL
-          fi
+           if [ "$ENV_STATUS" = "NONE" ] || [ "$ENV_STATUS" = "None" ] || [ "$ENV_STATUS" = "Terminated" ]; then
+             echo "Environment not found or terminated. Creating production..."
+             aws elasticbeanstalk create-environment \
+               --application-name docker-react \
+               --environment-name production \
+               --solution-stack-name "64bit Amazon Linux 2 v5.8.4 running Docker" \
+               --version-label $VERSION_LABEL
+           else
+             echo "Environment exists (status: $ENV_STATUS). Updating production..."
+             aws elasticbeanstalk update-environment \
+               --environment-name production \
+               --version-label $VERSION_LABEL
+           fi
 
       # Cleanup old application versions (keep last 10)
       - name: Cleanup old application versions
