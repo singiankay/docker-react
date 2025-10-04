@@ -111,12 +111,12 @@ jobs:
             --version-label $VERSION_LABEL \
             --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-185157186506,S3Key=dockerrun/$VERSION_LABEL.zip
 
-       # Create or update environment
-       - name: Create or Update environment
-         run: |
-           ENV_STATUS=$(aws elasticbeanstalk describe-environments \
-             --application-name docker-react \
-             --environment-names production \
+      # Create or update environment
+      - name: Create or Update environment
+        run: |
+          ENV_STATUS=$(aws elasticbeanstalk describe-environments \
+            --application-name docker-react \
+            --environment-names production \
              --query "Environments[0].Status" \
              --output text 2>/dev/null || echo "NONE")
 
