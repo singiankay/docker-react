@@ -64,28 +64,24 @@ jobs:
         id: vars
         run: echo "VERSION_LABEL=${GITHUB_SHA::8}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
 
-      # Create Dockerrun.aws.json and zip it
-      - name: Generate Dockerrun.aws.json
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: docker-react
-          IMAGE_TAG: ${{ github.sha }}
+      # Create deployment package with Dockerfile
+      - name: Create deployment package
         run: |
-          cat > Dockerrun.aws.json <<EOF
-          {
-            "AWSEBDockerrunVersion": 1,
-            "Image": {
-              "Name": "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG",
-              "Update": "true"
-            },
-            "Ports": [
-              {
-                "ContainerPort": "80"
-              }
-            ]
-          }
-          EOF
-          zip $VERSION_LABEL.zip Dockerrun.aws.json
+          # Copy Dockerfile to root for Elastic Beanstalk
+          cp frontend/Dockerfile ./Dockerfile
+          cp frontend/nginx.conf ./nginx.conf
+          cp -r frontend/src ./src
+          cp frontend/package.json ./package.json
+          cp frontend/vite.config.js ./vite.config.js
+          cp frontend/index.html ./index.html
+          cp frontend/eslint.config.js ./eslint.config.js
+          
+          # Create .dockerignore
+          echo "node_modules" > .dockerignore
+          echo ".git" >> .dockerignore
+          echo "*.md" >> .dockerignore
+          
+          zip -r $VERSION_LABEL.zip Dockerfile nginx.conf src package.json vite.config.js index.html eslint.config.js .dockerignore
 
       - name: Upload to S3
         run: |
@@ -166,7 +162,7 @@ jobs:
                --environment-name production \
                --solution-stack-name "64bit Amazon Linux 2023 v4.7.1 running Docker" \
                --version-label $VERSION_LABEL \
-               --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=ElasticBeanstalk-EC2-Role
+               --option-settings Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=ElasticBeanstalk-EC2-Role Namespace=aws:elasticbeanstalk:environment,OptionName=EnvironmentType,Value=SingleInstance
            else
              echo "Environment exists (status: $ENV_STATUS). Updating production..."
              aws elasticbeanstalk update-environment \
