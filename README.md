@@ -12,9 +12,36 @@ This project demonstrates a complete CI/CD pipeline that:
 
 ## 🚀 Deployment Pipeline
 
-### GitHub Actions Workflow (`.github/workflows/docker-image.yml`)
+### Current Active Workflows
 
-The pipeline consists of two main jobs:
+#### Amazon ECS Deployment (`.github/workflows/ecs-deploy.yml`)
+- Modern container orchestration with AWS Fargate
+- Serverless containers (no EC2 management)
+- Auto-scaling and load balancing
+- Production-ready and reliable
+
+#### Amazon EKS Deployment (`.github/workflows/eks-deploy.yml`)
+- Kubernetes-based orchestration
+- Full K8s control plane
+- Advanced scaling and management
+- Industry standard for container orchestration
+
+### Deprecated Workflows
+
+#### Elastic Beanstalk (`.github/workflows/deprecated/docker-image.yml`) - **DEPRECATED**
+- **Status**: Deprecated as of 2025-10-04
+- **Location**: Moved to `deprecated/` folder to avoid YAML errors
+- **Reason**: Multiple deployment failures and AWS deprioritizing EB
+- **Issues Encountered**:
+  - Dockerrun.aws.json version compatibility problems
+  - Container startup failures (503 errors)
+  - Complex debugging and unreliable deployments
+- **Replacement**: ECS and EKS workflows above
+- **Documentation**: See `.github/workflows/deprecated/README.md` for details
+
+### Legacy Pipeline (Deprecated)
+
+The original pipeline consisted of two main jobs:
 
 #### 1. **Build Job**
 - Sets up Docker Buildx for enhanced build capabilities
@@ -259,12 +286,33 @@ docker run -e CI=true react-app-dev npm run test -- --coverage
 - Old versions cleaned up (keeps last 10)
 - Health monitoring and automatic recovery
 
+## 🧹 Cleanup Performed (2025-10-04)
+
+### Elastic Beanstalk Resources Removed:
+- ✅ **Environments**: Terminated `production` and `production-new`
+- ✅ **Applications**: Deleted `docker-react` application
+- ✅ **S3 Artifacts**: Cleaned up 18 deployment packages
+- ✅ **Workflow**: Moved `docker-image.yml` to `deprecated/` folder with full documentation
+
+### Resources Preserved:
+- ✅ **ECR Repository**: `docker-react` (reused for ECS/EKS)
+- ✅ **ECR Images**: Latest images kept for new deployments
+- ✅ **IAM Roles**: GitHub Actions role maintained
+
 ## 📚 Additional Resources
 
-- [AWS Elastic Beanstalk Documentation](https://docs.aws.amazon.com/elasticbeanstalk/)
+### Modern Container Orchestration:
+- [Amazon ECS Documentation](https://docs.aws.amazon.com/ecs/)
+- [Amazon EKS Documentation](https://docs.aws.amazon.com/eks/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+
+### Development Tools:
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
 - [React Deployment Guide](https://create-react-app.dev/docs/deployment/)
+
+### Legacy (Deprecated):
+- [AWS Elastic Beanstalk Documentation](https://docs.aws.amazon.com/elasticbeanstalk/) - *Not recommended*
 
 ## 🤝 Contributing
 

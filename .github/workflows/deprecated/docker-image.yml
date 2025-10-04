@@ -1,3 +1,16 @@
+# DEPRECATED: This workflow is no longer active
+# Elastic Beanstalk has been replaced with ECS and EKS deployments
+# See .github/workflows/ecs-deploy.yml and .github/workflows/eks-deploy.yml for active workflows
+#
+# Issues with this workflow:
+# - Dockerrun.aws.json version compatibility issues
+# - Container startup failures (503 errors)
+# - AWS deprioritizing Elastic Beanstalk in favor of ECS/EKS
+#
+# Last working deployment: Never fully functional
+# Deprecated on: 2025-10-04
+# Reason: Switched to modern container orchestration (ECS/EKS)
+
 name: Deploy to Elastic Beanstalk
 
 on:
