@@ -106,26 +106,33 @@ jobs:
       # Verify EC2 IAM role exists (must be created manually)
       - name: Verify EC2 IAM Role
         run: |
+          echo "Checking IAM role and instance profile..."
+          echo "Current AWS identity:"
+          aws sts get-caller-identity
+          
           if aws iam get-role --role-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
-            echo "IAM role exists. Checking instance profile..."
+            echo "✅ IAM role exists. Checking instance profile..."
             if aws iam get-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
-              echo "Instance profile exists. Ready to deploy."
+              echo "✅ Instance profile exists. Ready to deploy."
             else
-              echo "ERROR: Instance profile 'ElasticBeanstalk-EC2-Role' does not exist."
-              echo "Please create it manually in AWS Console:"
-              echo "1. Go to IAM Console > Instance Profiles"
-              echo "2. Create instance profile named 'ElasticBeanstalk-EC2-Role'"
-              echo "3. Add role 'ElasticBeanstalk-EC2-Role' to the instance profile"
+              echo "❌ Instance profile 'ElasticBeanstalk-EC2-Role' does not exist."
+              echo "Debugging - listing all instance profiles:"
+              aws iam list-instance-profiles --query "InstanceProfiles[?contains(InstanceProfileName, 'ElasticBeanstalk')]"
+              echo ""
+              echo "Please create it manually using these commands:"
+              echo "aws iam create-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role"
+              echo "aws iam add-role-to-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role --role-name ElasticBeanstalk-EC2-Role"
               exit 1
             fi
           else
-            echo "ERROR: IAM role 'ElasticBeanstalk-EC2-Role' does not exist."
-            echo "Please create it manually in AWS Console:"
-            echo "1. Go to IAM Console > Roles"
-            echo "2. Create role for EC2 service"
-            echo "3. Attach policies: AWSElasticBeanstalkWebTier, AmazonEC2ContainerRegistryReadOnly"
-            echo "4. Name it 'ElasticBeanstalk-EC2-Role'"
-            echo "5. Create instance profile with the same name"
+            echo "❌ IAM role 'ElasticBeanstalk-EC2-Role' does not exist."
+            echo "Debugging - listing all roles:"
+            aws iam list-roles --query "Roles[?contains(RoleName, 'ElasticBeanstalk')]"
+            echo ""
+            echo "Please create it manually using these commands:"
+            echo "aws iam create-role --role-name ElasticBeanstalk-EC2-Role --assume-role-policy-document '{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Service\": \"ec2.amazonaws.com\"}, \"Action\": \"sts:AssumeRole\"}]}'"
+            echo "aws iam attach-role-policy --role-name ElasticBeanstalk-EC2-Role --policy-arn arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
+            echo "aws iam attach-role-policy --role-name ElasticBeanstalk-EC2-Role --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
             exit 1
           fi
 
