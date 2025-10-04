@@ -6,3 +6,15 @@ before_install:
   - docker build -t singiankay/docker-react -f ./frontend/Dockerfile.dev .
 script:
   - docker run -e CI=true singiankay/docker-react npm run test -- --coverage
+deploy:
+  provider: elasticbeanstalk
+  region: "ap-southeast-1"
+  app: "docker-react" # this is the name of the app in aws elastic beanstalk
+  env: "production" # this is the environment in aws elastic beanstalk
+  bucket_name: "elasticbeanstalk-ap-southeast-1-012345678901" # this is the name of the bucket in aws elastic beanstalk
+  bucket_path: "docker"
+  on:
+    branch: main
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key:
+    secure: $AWS_SECRET_KEY
