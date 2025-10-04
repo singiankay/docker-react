@@ -110,20 +110,9 @@ jobs:
           echo "Current AWS identity:"
           aws sts get-caller-identity
           
+          # Check if role exists
           if aws iam get-role --role-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
-            echo "✅ IAM role exists. Checking instance profile..."
-            if aws iam get-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role 2>/dev/null; then
-              echo "✅ Instance profile exists. Ready to deploy."
-            else
-              echo "❌ Instance profile 'ElasticBeanstalk-EC2-Role' does not exist."
-              echo "Debugging - listing all instance profiles:"
-              aws iam list-instance-profiles --query "InstanceProfiles[?contains(InstanceProfileName, 'ElasticBeanstalk')]"
-              echo ""
-              echo "Please create it manually using these commands:"
-              echo "aws iam create-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role"
-              echo "aws iam add-role-to-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role --role-name ElasticBeanstalk-EC2-Role"
-              exit 1
-            fi
+            echo "✅ IAM role exists."
           else
             echo "❌ IAM role 'ElasticBeanstalk-EC2-Role' does not exist."
             echo "Debugging - listing all roles:"
@@ -133,6 +122,23 @@ jobs:
             echo "aws iam create-role --role-name ElasticBeanstalk-EC2-Role --assume-role-policy-document '{\"Version\": \"2012-10-17\", \"Statement\": [{\"Effect\": \"Allow\", \"Principal\": {\"Service\": \"ec2.amazonaws.com\"}, \"Action\": \"sts:AssumeRole\"}]}'"
             echo "aws iam attach-role-policy --role-name ElasticBeanstalk-EC2-Role --policy-arn arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
             echo "aws iam attach-role-policy --role-name ElasticBeanstalk-EC2-Role --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+            exit 1
+          fi
+          
+          # Check if instance profile exists using list command (more reliable)
+          echo "Checking instance profile..."
+          INSTANCE_PROFILE_EXISTS=$(aws iam list-instance-profiles --query "InstanceProfiles[?InstanceProfileName=='ElasticBeanstalk-EC2-Role']" --output text)
+          
+          if [ -n "$INSTANCE_PROFILE_EXISTS" ]; then
+            echo "✅ Instance profile exists and is ready."
+          else
+            echo "❌ Instance profile 'ElasticBeanstalk-EC2-Role' does not exist."
+            echo "Debugging - listing all instance profiles:"
+            aws iam list-instance-profiles --query "InstanceProfiles[?contains(InstanceProfileName, 'ElasticBeanstalk')]"
+            echo ""
+            echo "Please create it manually using these commands:"
+            echo "aws iam create-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role"
+            echo "aws iam add-role-to-instance-profile --instance-profile-name ElasticBeanstalk-EC2-Role --role-name ElasticBeanstalk-EC2-Role"
             exit 1
           fi
 
