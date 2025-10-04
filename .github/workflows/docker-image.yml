@@ -82,22 +82,23 @@ jobs:
           EOF
           zip deploy.zip Dockerrun.aws.json
 
-      # Upload to Beanstalk S3 bucket
       - name: Upload to S3
         run: |
           aws s3 cp deploy.zip s3://elasticbeanstalk-ap-southeast-1-185157186506/dockerrun/${{ github.sha }}.zip
 
-      # Create new EB application version
-      - name: Create EB application version
+      - name: Generate unique version label
+        id: vars
+        run: echo "VERSION_LABEL=$(echo $GITHUB_SHA-$(date +%s))" >> $GITHUB_ENV
+
+      - name: Create application version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name docker-react \
-            --version-label ${{ github.sha }}-${{ github.run_number }} \
+            --version-label $VERSION_LABEL \
             --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-185157186506,S3Key=dockerrun/${{ github.sha }}.zip
 
-      # Deploy EB application version to environment
-      - name: Deploy to EB environment
+      - name: Update environment
         run: |
           aws elasticbeanstalk update-environment \
             --environment-name production \
-            --version-label ${{ github.sha }}-${{ github.run_number }}
+            --version-label $VERSION_LABEL
