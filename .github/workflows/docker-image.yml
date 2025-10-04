@@ -59,7 +59,12 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ./frontend/Dockerfile ./frontend
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # Create Dockerrun.aws.json
+      # Generate unique version label once
+      - name: Generate unique version label
+        id: vars
+        run: echo "VERSION_LABEL=${GITHUB_SHA::8}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+
+      # Create Dockerrun.aws.json and zip it
       - name: Generate Dockerrun.aws.json
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -80,25 +85,44 @@ jobs:
             ]
           }
           EOF
-          zip deploy.zip Dockerrun.aws.json
+          zip $VERSION_LABEL.zip Dockerrun.aws.json
 
       - name: Upload to S3
         run: |
-          aws s3 cp deploy.zip s3://elasticbeanstalk-ap-southeast-1-185157186506/dockerrun/${{ github.sha }}.zip
-
-      - name: Generate unique version label
-        id: vars
-        run: echo "VERSION_LABEL=$(echo $GITHUB_SHA-$(date +%s))" >> $GITHUB_ENV
+          aws s3 cp $VERSION_LABEL.zip s3://elasticbeanstalk-ap-southeast-1-185157186506/dockerrun/$VERSION_LABEL.zip
 
       - name: Create application version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name docker-react \
             --version-label $VERSION_LABEL \
-            --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-185157186506,S3Key=dockerrun/${{ github.sha }}.zip
+            --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-185157186506,S3Key=dockerrun/$VERSION_LABEL.zip
 
       - name: Update environment
         run: |
           aws elasticbeanstalk update-environment \
             --environment-name production \
             --version-label $VERSION_LABEL
+
+      # Cleanup old application versions (keep last 10)
+      - name: Cleanup old application versions
+        run: |
+          VERSIONS=$(aws elasticbeanstalk describe-application-versions \
+            --application-name docker-react \
+            --query "ApplicationVersions[?Status=='PROCESSED'].VersionLabel" \
+            --output text | tr '\t' '\n' | sort)
+
+          COUNT=$(echo "$VERSIONS" | wc -l)
+
+          if [ $COUNT -gt 10 ]; then
+            DELETE=$(echo "$VERSIONS" | head -n -10)
+            for v in $DELETE; do
+              echo "Deleting old version: $v"
+              aws elasticbeanstalk delete-application-version \
+                --application-name docker-react \
+                --version-label $v \
+                --delete-source-bundle
+            done
+          else
+            echo "No cleanup needed. Total versions: $COUNT"
+          fi
